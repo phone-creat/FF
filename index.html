@@ -1,13 +1,38 @@
 <!DOCTYPE html><html>
 <head>
-  <title>Mini Free Fire Full</title>
+  <title>Mini Free Fire Mobile</title>
   <style>
     body { text-align:center; font-family:Arial; background:#111; color:#fff; }
     input, button { padding:10px; margin:5px; }
-    canvas { background:#222; display:none; margin:auto; }
+    canvas { background:#222; display:none; margin:auto; }/* controls */
+#controls {
+  display:none;
+  position:fixed;
+  bottom:20px;
+  width:100%;
+}
+
+.btn {
+  width:60px;
+  height:60px;
+  background:#444;
+  color:#fff;
+  border:none;
+  border-radius:50%;
+  font-size:20px;
+  margin:5px;
+}
+
+#shootBtn {
+  position:fixed;
+  right:20px;
+  bottom:40px;
+  background:red;
+}
+
   </style>
 </head>
-<body><h2>🔐 Đăng nhập / Đăng ký</h2><div id="auth">
+<body><h2>🔐 Login</h2><div id="auth">
   <input id="user" placeholder="Username"><br>
   <input id="pass" placeholder="Password" type="password"><br>
   <button onclick="register()">Đăng ký</button>
@@ -17,14 +42,26 @@
   <button onclick="startGame()">Chơi</button>
 </div><h3 id="scoreText" style="display:none;">Điểm: 0</h3><canvas id="game" width="400" height="600"></canvas>
 
+<!-- controls --><div id="controls">
+  <div>
+    <button class="btn" ontouchstart="move('up')" ontouchend="stop()">⬆</button>
+  </div>
+  <div>
+    <button class="btn" ontouchstart="move('left')" ontouchend="stop()">⬅</button>
+    <button class="btn" ontouchstart="move('down')" ontouchend="stop()">⬇</button>
+    <button class="btn" ontouchstart="move('right')" ontouchend="stop()">➡</button>
+  </div>
+</div><button id="shootBtn" class="btn"
+ontouchstart="shoot()">🔫</button>
+
 <script>
 // ===== AUTH =====
 function register(){
   let u = user.value;
   let p = pass.value;
-  if(!u || !p) return alert("Nhập đủ đi!");
+  if(!u || !p) return alert("Nhập đủ!");
   localStorage.setItem("acc_"+u, p);
-  alert("Đăng ký OK!");
+  alert("OK!");
 }
 
 function login(){
@@ -34,9 +71,7 @@ function login(){
     auth.style.display="none";
     menu.style.display="block";
     name.innerText = u;
-  } else {
-    alert("Sai tài khoản!");
-  }
+  } else alert("Sai!");
 }
 
 // ===== GAME =====
@@ -44,50 +79,50 @@ const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 
 let player, bullets, enemies, score;
+let direction = null;
 
 function startGame(){
   menu.style.display="none";
   canvas.style.display="block";
+  controls.style.display="block";
+  shootBtn.style.display="block";
   scoreText.style.display="block";
 
-  // reset
   player = {x:Math.random()*380, y:Math.random()*580, size:20};
   bullets = [];
   enemies = [];
   score = 0;
 
-  spawnLoop();
+  setInterval(()=>{
+    enemies.push({x:Math.random()*380, y:0, size:20});
+  },1000);
+
   update();
 }
 
-// movement
-document.addEventListener("keydown", e => {
-  if(!player) return;
-
-  if (e.key === "ArrowLeft") player.x -= 10;
-  if (e.key === "ArrowRight") player.x += 10;
-  if (e.key === "ArrowUp") player.y -= 10;
-  if (e.key === "ArrowDown") player.y += 10;
-
-  // shoot
-  if (e.key === " ") {
-    bullets.push({x:player.x+8, y:player.y});
-  }
-});
-
-// spawn enemy
-function spawnLoop(){
-  setInterval(()=>{
-    enemies.push({
-      x:Math.random()*380,
-      y:0,
-      size:20
-    });
-  }, 1000);
+// movement touch
+function move(dir){
+  direction = dir;
 }
 
+function stop(){
+  direction = null;
+}
+
+// shoot
+function shoot(){
+  bullets.push({x:player.x+8, y:player.y});
+}
+
+// update
 function update(){
   ctx.clearRect(0,0,400,600);
+
+  // move
+  if(direction==="left") player.x -= 3;
+  if(direction==="right") player.x += 3;
+  if(direction==="up") player.y -= 3;
+  if(direction==="down") player.y += 3;
 
   // player
   ctx.fillStyle="lime";
@@ -98,8 +133,7 @@ function update(){
   bullets.forEach((b,i)=>{
     b.y -= 6;
     ctx.fillRect(b.x, b.y, 5,10);
-
-    if(b.y < 0) bullets.splice(i,1);
+    if(b.y<0) bullets.splice(i,1);
   });
 
   // enemies
@@ -108,7 +142,6 @@ function update(){
     e.y += 2;
     ctx.fillRect(e.x, e.y, e.size, e.size);
 
-    // collision
     bullets.forEach((b,bi)=>{
       if(b.x < e.x+e.size && b.x+5 > e.x &&
          b.y < e.y+e.size && b.y+10 > e.y){
@@ -118,7 +151,6 @@ function update(){
       }
     });
 
-    // game over
     if(player &&
        player.x < e.x+e.size &&
        player.x+player.size > e.x &&
